@@ -8,6 +8,16 @@
 import SwiftUI
 import FirebaseAuth
 
+struct TempRLView: View {
+    @State var nextView = true
+    
+    var body: some View {
+        NavigationLink(destination: ReadingListView().navigationBarBackButtonHidden(true), isActive: $nextView) {
+            EmptyView()
+        }
+    }
+}
+
 struct ReadingListView: View {
     @ObservedObject var bookListVM = BookListViewModel()
         
@@ -46,7 +56,7 @@ struct ReadingListView: View {
             .padding()
             
             // Navigation link to return to sign in/login screen
-            NavigationLink(destination: ContentView(hasCurrentUser: false).navigationBarHidden(true), isActive: $signOut){
+            NavigationLink(destination: ContentView().navigationBarHidden(true), isActive: $signOut){
                 EmptyView()
             }
         }
