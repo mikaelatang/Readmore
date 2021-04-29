@@ -16,16 +16,10 @@ class BookRepository {
     
     @Published var books = [Book]()
     
-    //init() {
-        //loadData(Auth.auth().currentUser?.uid)
-    //}
-    
     func loadData(_ userId : String?) {
-        print("Current user Id: \(userId)")
-        
         db.collection("books")
             .order(by: "createdTime")
-            .whereField("userId", isEqualTo: userId)
+            .whereField("userId", isEqualTo: userId!)
             .addSnapshotListener { (querySnapshot, error) in
             if let querySnapshot = querySnapshot {
                 self.books = querySnapshot.documents.compactMap { document in
@@ -59,4 +53,3 @@ class BookRepository {
         }
     }
 }
-
