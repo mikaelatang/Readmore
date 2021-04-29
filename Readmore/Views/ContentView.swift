@@ -10,33 +10,82 @@ import FirebaseAuth
 import FirebaseFirestore
 import Firebase
 
-struct ContentView: View {
-    @State var hasCurrentUser : Bool
+struct WelcomeView: View {
+    @State private var showContentView : Bool = false
     
     var body: some View {
-        // If no user is logged in
-        if hasCurrentUser == false {
+        NavigationView {
             ZStack {
                 // Background
                 LinearGradient(gradient: .init(colors: [ Constants.Colours.lemon, Constants.Colours.mint, Constants.Colours.darkCyan]), startPoint: .top, endPoint: .bottom)
                     .edgesIgnoringSafeArea(.all)
                 
-                Home()
-            }
-        }
-        
-        // If some user is already logged in
-        else {
-            NavigationLink(destination: ReadingListView().navigationBarBackButtonHidden(true), isActive: $hasCurrentUser) {
-                EmptyView()
+                VStack(spacing: 10){
+                    // Welcome and logo
+                    Text("WELCOME TO")
+                        .font(.system(size: 20, weight: .light, design: .default))
+                        .foregroundColor(.black)
+                    
+                    HStack {
+                        Text("readmore")
+                            .font(.system(size: 60, weight: .light, design: .default))
+                            .foregroundColor(Constants.Colours.darkCyan)
+                            .offset(x: 9, y: 2)
+                        
+                        Image(systemName: "books.vertical")
+                            .resizable()
+                            .frame(width: 50, height: 50)
+                            .foregroundColor(Constants.Colours.darkCyan)
+                    }
+                    
+                    NavigationLink(destination: ContentView().navigationBarBackButtonHidden(true), isActive: $showContentView) {
+                        EmptyView()
+                    }
+                    
+                    Button (action: {
+                        if Auth.auth().currentUser != nil {
+                            do {
+                                try Auth.auth().signOut()
+                            } catch {
+                                print("Error: Could not sign current user out.")
+                            }
+                        }
+                        
+                        showContentView = true
+                    }){
+                        Text("Tap to continue")
+                            .foregroundColor(.black)
+                            .font(.system(size: 20, weight: .semibold, design: .default))
+                            .padding(.vertical, 20)
+                            .frame(width: UIScreen.main.bounds.width - 100, height: 50)
+                    }
+                    .background(
+                        LinearGradient(gradient: .init(colors: [Constants.Colours.darkCyan, Constants.Colours.mint, Constants.Colours.lemon]), startPoint: .leading, endPoint: .trailing)
+                    )
+                    .cornerRadius(8)
+                    .shadow(radius: 25)
+                }
+                .offset(y: -UIScreen.main.bounds.height / 9)
             }
         }
     }
 }
 
-struct ContentView_Previews: PreviewProvider {
+struct ContentView: View {
+    var body: some View {
+        ZStack {
+            // Background
+            LinearGradient(gradient: .init(colors: [ Constants.Colours.lemon, Constants.Colours.mint, Constants.Colours.darkCyan]), startPoint: .top, endPoint: .bottom)
+                .edgesIgnoringSafeArea(.all)
+            
+            Home()
+        }
+    }
+}
+
+struct WelcomeView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView(hasCurrentUser: false)
+        WelcomeView()
     }
 }
 
@@ -45,13 +94,13 @@ struct Home: View {
     
     var body: some View {
         VStack {
+            // Logo
             HStack {
                 Text("readmore")
                     .font(.system(size: 60, weight: .light, design: .default))
                     .foregroundColor(Constants.Colours.darkCyan)
                     .offset(x: 9, y: 2)
                 
-                // Logo
                 Image(systemName: "books.vertical")
                     .resizable()
                     .frame(width: 50, height: 50)
@@ -108,7 +157,7 @@ struct Home: View {
 
 struct Login: View {
     @State private var error : String?
-    @State private var showHomeScreen : Bool = false
+    @State private var successfulLogin : Bool = false
     
     @State private var email = ""
     @State private var password = ""
@@ -129,7 +178,7 @@ struct Login: View {
                 .disableAutocorrection(true)
                 .cornerRadius(10)
             
-            NavigationLink(destination: ContentView(hasCurrentUser: true).navigationBarBackButtonHidden(true), isActive: $showHomeScreen) {
+            NavigationLink(destination: TempRLView().navigationBarBackButtonHidden(true), isActive: $successfulLogin) {
                 EmptyView()
             }
             
@@ -156,7 +205,7 @@ struct Login: View {
                         }
                         
                         else {
-                            showHomeScreen = true
+                            successfulLogin = true
                         }
                     }
                 }
@@ -197,7 +246,7 @@ struct Login: View {
 
 struct SignUp: View {
     @State private var error : String?
-    @State private var showHomeScreen : Bool = false
+    @State private var successfulSignUp : Bool = false
     
     @State private var fullName : String = ""
     @State private var email: String = ""
@@ -234,7 +283,7 @@ struct SignUp: View {
                 .disableAutocorrection(true)
                 .cornerRadius(10)
             
-            NavigationLink(destination: ContentView(hasCurrentUser: true).navigationBarBackButtonHidden(true), isActive: $showHomeScreen) {
+            NavigationLink(destination: TempRLView().navigationBarBackButtonHidden(true), isActive: $successfulSignUp) {
                 EmptyView()
             }
             
@@ -278,7 +327,7 @@ struct SignUp: View {
                                 
                                 else {
                                     print("Signed up: \(Auth.auth().currentUser?.uid)")
-                                    showHomeScreen = true
+                                    successfulSignUp = true
                                 }
                             }
                         }
