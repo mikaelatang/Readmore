@@ -12,12 +12,12 @@ import FirebaseAuth
 class BookListViewModel : ObservableObject {
     @Published var bookRepository = BookRepository()
     @Published var bookCellViewModels = [BookCellViewModel]()
+    var currentUser = Auth.auth().currentUser?.uid
     
     private var cancellables = Set<AnyCancellable>()
     
     init() {
-        print("User after logging in: \(Auth.auth().currentUser?.uid)")
-        bookRepository.loadData(Auth.auth().currentUser?.uid)
+        bookRepository.loadData(currentUser)
         
         bookRepository.$books.map { books in
             books.map { book in
