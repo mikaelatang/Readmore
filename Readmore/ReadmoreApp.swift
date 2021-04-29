@@ -26,15 +26,7 @@ struct Testing_SwiftUI2App: App {
 
     var body: some Scene {
         WindowGroup {
-            NavigationView {
-                if Auth.auth().currentUser == nil {
-                    ContentView(hasCurrentUser: false)
-                }
-                
-                else {
-                    ContentView(hasCurrentUser: true)
-                }
-            }
+            WelcomeView()
         }
     }
 }
