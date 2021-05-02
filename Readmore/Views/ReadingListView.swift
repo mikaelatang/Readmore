@@ -6,23 +6,157 @@
 //
 
 import SwiftUI
+import UIKit
 import FirebaseAuth
+import SwiftSoup
+
+class RecommendedViewController {
+    // Chapters Indigo URL
+    let baseurl1 : String = "https://www.chapters.indigo.ca/en-ca/home/search/?keywords="
+    let baseurl2 : String = "#internal=1"
+    @ObservedObject var bookListVM : BookListViewModel
+    
+    init (bookListVM : BookListViewModel) {
+        self.bookListVM = bookListVM
+    }
+    
+    func loadRecommended() -> [RecommendedBook] {
+        var recommendedBooks : [RecommendedBook] = []
+        
+        // Find recommendations for each author in reading list
+        for bookCellVM in bookListVM.bookCellViewModels {
+            let title : String = bookCellVM.book.title
+            let author : String = bookCellVM.book.author
+            var authorLst : [String] = author.components(separatedBy: " ")
+            var middleurl : String = ""
+            
+            if (authorLst.count > 0) {
+                middleurl = authorLst[0]
+                authorLst.remove(at: 0)
+            }
+            
+            for s in authorLst {
+                middleurl = middleurl + "%20" + s
+            }
+            
+            if middleurl != "" {
+                let url = URL(string: baseurl1 + middleurl + baseurl2)
+                
+                do {
+                    // grab and process html from url
+                    let html = try String(contentsOf: url!, encoding: String.Encoding.ascii)
+                    let doc: Document = try SwiftSoup.parse(html)
+                    let lst : [Element] = try doc.getElementsByClass("product-list__product-title-group").array()
+                    
+                    for item in lst {
+                        let newTitle = try item.select("h3").first()!.select("a").first()!.text()
+                        let newAuthor = try item.select("p").first()!.select("a").first()!.text()
+                        
+                        if (newTitle != title && newAuthor == author) {
+                            recommendedBooks.append(RecommendedBook(title: newTitle, author: newAuthor))
+                        }
+                    }
+                    
+                } catch Exception.Error(type: let type, Message: let message) {
+                    print(type)
+                    print(message)
+                } catch {
+                    print("")
+                }
+            }
+        }
+        
+        return recommendedBooks
+    }
+}
 
 struct TempRLView: View {
     @State var nextView = true
     
     var body: some View {
-        NavigationLink(destination: ReadingListView().navigationBarBackButtonHidden(true), isActive: $nextView) {
+        NavigationLink(destination: MainView().navigationBarBackButtonHidden(true), isActive: $nextView) {
             EmptyView()
         }
     }
 }
 
-struct ReadingListView: View {
+struct MainView: View {
     @ObservedObject var bookListVM = BookListViewModel()
+    @State var signOut = false
+    
+    @State private var index = 0
+    
+    var body: some View {
+        VStack {
+            // Navigation link to return to sign in/login screen
+            NavigationLink(destination: ContentView().navigationBarHidden(true), isActive: $signOut){
+                EmptyView()
+            }
+            
+            HStack {
+                Button(action: {
+                    withAnimation(.spring(response: 0.8, dampingFraction: 0.5, blendDuration: 0.5)) {
+                        self.index = 0
+                    }
+                }) {
+                    Text("Reading List")
+                        .foregroundColor(self.index == 0 ? .black : .white)
+                        .fontWeight(.bold)
+                        .padding()
+                        .frame(width: UIScreen.main.bounds.width / 2, height: 50)
+                }
+                .background(self.index == 0 ? Constants.Colours.lightGray : Color.clear)
+                .clipShape(Capsule())
+                
+                Button(action: {
+                    withAnimation(.spring(response: 0.8, dampingFraction: 0.5, blendDuration: 0.5)) {
+                        self.index = 1
+                    }
+                }) {
+                    Text("For You")
+                        .foregroundColor(self.index == 1 ? .black : .white)
+                        .fontWeight(.bold)
+                        .padding()
+                        .frame(width: UIScreen.main.bounds.width / 2, height: 50)
+                }
+                .background(self.index == 1 ? Constants.Colours.lightGray : Color.clear)
+                .clipShape(Capsule())
+            }
+            .background(Color.black.opacity(0.1))
+            .clipShape(Capsule())
+            
+            // shows reading list or for you depending on user selection
+            if self.index == 0 {
+                ReadingListView(bookListVM: bookListVM)
+            } else {
+                RecommendedView(bookListVM: bookListVM, books: RecommendedViewController(bookListVM: bookListVM).loadRecommended())
+            }
+        }
+        .background(Constants.Colours.lightGray)
+        .navigationBarItems(
+            trailing:
+                Button(action: {
+                    // Sign out user from firebase
+                    do {
+                        try Auth.auth().signOut()
+                    } catch {
+                        print("Error: Could not sign current user out.")
+                    }
+                    
+                    self.signOut = true
+                    
+                }) {
+                    Text("Sign Out")
+                        .padding()
+                        .foregroundColor(Constants.Colours.darkCyan)
+                })
+    }
+}
+
+struct ReadingListView: View {
+    @ObservedObject var bookListVM : BookListViewModel
         
     @State var presentAddNewItem = false
-    @State var signOut = false
     
     var body: some View {
         VStack (alignment: .leading) {
@@ -54,31 +188,7 @@ struct ReadingListView: View {
                 }
             }
             .padding()
-            
-            // Navigation link to return to sign in/login screen
-            NavigationLink(destination: ContentView().navigationBarHidden(true), isActive: $signOut){
-                EmptyView()
-            }
         }
-        .navigationBarTitle("Reading List")
-        .background(Constants.Colours.lightGray)
-        .navigationBarItems(
-            trailing:
-                Button(action: {
-                    // Sign out user from firebase
-                    do {
-                        try Auth.auth().signOut()
-                    } catch {
-                        print("Error: Could not sign current user out.")
-                    }
-                    
-                    self.signOut = true
-                    
-                }) {
-                    Text("Sign Out")
-                        .padding()
-                        .foregroundColor(Constants.Colours.darkCyan)
-                })
     }
     
 }
@@ -86,7 +196,28 @@ struct ReadingListView: View {
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            ReadingListView()
+            MainView()
+        }
+    }
+}
+
+struct RecommendedView: View {
+    @ObservedObject var bookListVM : BookListViewModel
+    @State var books : [RecommendedBook]
+        
+    var body: some View {
+        VStack (alignment: .leading) {
+            if books.isEmpty {
+                List {
+                    Text("No recommendations at the moment")
+                }
+            } else {
+                List {
+                    ForEach (books, id: \.self) { book in
+                        RecommendedBookCell(book: book)
+                    }
+                }
+            }
         }
     }
 }
@@ -112,6 +243,20 @@ struct BookCell : View {
             HStack {
                 Text("By")
                 TextField("Enter author name", text: $bookCellVM.book.author)
+            }
+        }
+    }
+}
+
+struct RecommendedBookCell : View {
+    @State var book : RecommendedBook
+    
+    var body : some View {
+        VStack (alignment: .leading) {
+            Text(book.title)
+            HStack {
+                Text("By")
+                Text(book.author)
             }
         }
     }

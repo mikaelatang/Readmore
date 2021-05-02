@@ -19,6 +19,11 @@ struct Book : Codable, Identifiable {
     var userId : String?
 }
 
+struct RecommendedBook : Hashable {
+    var title : String
+    var author : String
+}
+
 #if DEBUG
 let testDataBooks = [
     Book(title: "The Lord of the Rings", author: "J.R.R Tolkien", completed: false),

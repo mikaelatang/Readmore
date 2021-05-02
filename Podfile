@@ -12,6 +12,8 @@ target 'Readmore' do
 	pod 'Firebase/Core'
 	pod 'Firebase/Firestore'
   pod 'FirebaseFirestoreSwift'
+
+  pod 'SwiftSoup'
 	
 
   target 'ReadmoreTests' do
